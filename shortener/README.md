@@ -8,11 +8,8 @@
 Запуск сервера осуществляется с параметром "./server.py -c config.json", где config.json - название файла конфигурации формата json.
 
 Настройки config.json:
-  "host":       "127.0.0.1",    IP хоста
-  "port":       8080,           Port хоста
-  "database":   "shortener.db", Название Базы данных
-  "lifetime":   120,            Время жизни коротких ссылок в БД
-  "debug_mode": 10,             Режим логгирования
-  "10":         "DEBUG",
-  "20":         "INFO",
-  "30":         "WARNING"
+  "host"        IP хоста
+  "port"        Port хоста
+  "database"    Название Базы данных
+  "lifetime"    Время жизни коротких ссылок в БД в сек.
+  "debug_mode"  Режим логгирования ("10" - DEBUG, "20" - INFO, "30" - WARNING)
