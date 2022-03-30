@@ -1,0 +1,10 @@
+{
+  "host":       "127.0.0.1",
+  "port":       8080,
+  "database":   "shortener.db",
+  "lifetime":   120,
+  "debug_mode": 10,
+  "10":         "DEBUG",
+  "20":         "INFO",
+  "30":         "WARNING"
+}
