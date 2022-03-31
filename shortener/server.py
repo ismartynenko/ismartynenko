@@ -4,15 +4,21 @@ import logging
 import sys
 from urllib import parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from database import Sql
+from database import DBClient
 
 
 class MyHandler(BaseHTTPRequestHandler):
+    def __init__(self, request, client_address, server):
+        super().__init__(request, client_address, server)
+        self.ua = None
+
     # Отправка заголовков
     def do(self, code=200):
         self.send_response(code)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
+        # Определяем User-agent
+        self.ua = self.headers['User-Agent'].split('/')[0]
         # Проверяем и удаляем ссылки с истекшим временем жизни при каждом POST/GET запросе
         rem = db.clean(lifetime)
         # Вывод в лог количества удаленных записей
@@ -22,36 +28,35 @@ class MyHandler(BaseHTTPRequestHandler):
             logger.info(f'Removed {rem} old record(s)')
 
     # Вывод информации в WEB - интерфейс
-    def html(self, code: int, info=''):
+    def html(self, code: int, link='', slug=''):
         if code == 200:
+            info = '<a href="./' + slug + '">' + link + '</a>'
             txt = html['200'].replace('_INFO', info)
-            self.wfile.write(txt.encode())
+            self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(link.encode())
         elif code == 301:
-            txt = html['301'].replace('_INFO', info)
-            self.wfile.write(txt.encode())
+            txt = html['301'].replace('_INFO', link)
+            self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(link.encode())
         elif code == 404:
             txt = html['404']
-            self.wfile.write(txt.encode())
+            self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write('Error 404'.encode())
 
     # Обработка POST запроса
     def do_POST(self):
         self.do(200)
-        # Определяем User-Agent
-        ua = self.headers['User-Agent']
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         # В зависимости от User-Agent получаем ссылку для сокращения
-        if ua.find('curl') != -1:
+        if self.ua == 'curl':
             path = post_data.decode()
         else:
             r_path = parse.parse_qs(post_data.decode())
             path = r_path['link'][0]
-        logger.debug(f"POST request:\n\tUser-Agent: {ua}\n\tLink for Shortener: {path}")
+        logger.debug(f"POST request:\n\tUser-Agent: {self.ua}\n\tLink for Shortener: {path}")
         # Получаем короткую ссылку
         slug = db.post(path)
         link = str(host) + ':' + str(port) + '/' + slug
-        # Выводим информацию в Web-интерфейс
-        self.html(200, '<a href="./' + slug + '">' + link + '</a>')
+        # Выводим информацию в Web-интерфейс и CMD-интерфейс
+        self.html(200, link, slug)
         logger.info(f"Created short link: {link} for URL: {path}")
 
     # Обработка GET запроса
@@ -117,7 +122,7 @@ if __name__ == '__main__':
 
     try:
         # Создаем объект для работы с БД через менеджер контекста
-        with Sql(dbname) as sql:
+        with DBClient(dbname) as sql:
             logger.info(f'Connecting to Database: {dbname}')
             db = sql
             # Запуск сервера
@@ -130,4 +135,4 @@ if __name__ == '__main__':
         server.server_close()
     # Обработка неожиданных исключений
     except Exception as exc:
-        logger.exception("Unexpected error: {}".format(exc))
+        logger.exception(f"Unexpected error: {exc}")
