@@ -1,15 +1,18 @@
 import json
 import argparse
 import logging
+import os
 import sys
+from functools import partial
 from urllib import parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from database import DBClient
 
 
 class MyHandler(BaseHTTPRequestHandler):
-    def __init__(self, request, client_address, server):
-        super().__init__(request, client_address, server)
+    def __init__(self, db, *args, **kwargs):
+        self.db = db
+        super().__init__(*args, **kwargs)
         self.ua = None
 
     # Отправка заголовков
@@ -20,7 +23,7 @@ class MyHandler(BaseHTTPRequestHandler):
         # Определяем User-agent
         self.ua = self.headers['User-Agent'].split('/')[0]
         # Проверяем и удаляем ссылки с истекшим временем жизни при каждом POST/GET запросе
-        rem = db.clean(lifetime)
+        rem = self.db.clean(lifetime)
         # Вывод в лог количества удаленных записей
         if rem == 0:
             logger.debug(f'Removed {rem} old record(s)')
@@ -53,7 +56,7 @@ class MyHandler(BaseHTTPRequestHandler):
             path = r_path['link'][0]
         logger.debug(f"POST request:\n\tUser-Agent: {self.ua}\n\tLink for Shortener: {path}")
         # Получаем короткую ссылку
-        slug = db.post(path)
+        slug = self.db.post(path)
         link = str(host) + ':' + str(port) + '/' + slug
         # Выводим информацию в Web-интерфейс и CMD-интерфейс
         self.html(200, link, slug)
@@ -67,7 +70,7 @@ class MyHandler(BaseHTTPRequestHandler):
         else:
             logger.debug(f"GET request:\n\tPath: {self.path}")
             # Получаем длинную ссылку
-            uri = db.get(self.path)
+            uri = self.db.get(self.path)
             # Проверка на ее наличие в БД
             if uri:
                 # Редирект на длинную ссылку
@@ -114,19 +117,20 @@ if __name__ == '__main__':
 
     # Получаем html код для web интерфейса
     html = {}
-    with open('message.txt') as msg:
-        logger.info(f'Reading HTML-message file: {msg.name}')
-        for line in msg:
-            key, value = line.split(':')
-            html[key] = value
+    static = os.getcwd() + r'\static\\'
+    for filename in os.listdir(static):
+        with open(static + filename) as file:
+            code = file.read()
+            html[filename.rstrip('.html')] = code
 
     try:
         # Создаем объект для работы с БД через менеджер контекста
-        with DBClient(dbname) as sql:
+        with DBClient(dbname) as database:
             logger.info(f'Connecting to Database: {dbname}')
-            db = sql
+            # Передаем название базы данных в конструктор класса
+            my_handler = partial(MyHandler, database)
             # Запуск сервера
-            with HTTPServer((host, port), MyHandler) as server:
+            with HTTPServer((host, port), my_handler) as server:
                 logger.warning(f'Started HTTP server on: {host}:{port}')
                 server.serve_forever()
     # Обработка исключения на остановку сервера
