@@ -3,7 +3,7 @@
   "port":       8080,
   "database":   "shortener.db",
   "lifetime":   120,
-  "debug_mode": 10,
+  "debug_mode": 20,
   "10":         "DEBUG",
   "20":         "INFO",
   "30":         "WARNING"

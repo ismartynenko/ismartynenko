@@ -15,7 +15,7 @@ class MyHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
         self.ua = None
 
-    # Отправка заголовков
+    # Отправка заголовков и определение User-Agent
     def do(self, code=200):
         self.send_response(code)
         self.send_header('Content-type', 'text/html')
@@ -30,7 +30,7 @@ class MyHandler(BaseHTTPRequestHandler):
         else:
             logger.info(f'Removed {rem} old record(s)')
 
-    # Вывод информации в WEB - интерфейс
+    # Вывод информации в Web-интерфейс или CMD-интерфейс
     def html(self, code: int, link='', slug=''):
         if code == 200:
             info = '<a href="./' + slug + '">' + link + '</a>'
@@ -58,9 +58,9 @@ class MyHandler(BaseHTTPRequestHandler):
         # Получаем короткую ссылку
         slug = self.db.post(path)
         link = str(host) + ':' + str(port) + '/' + slug
-        # Выводим информацию в Web-интерфейс и CMD-интерфейс
+        # Выводим информацию в Web-интерфейс или CMD-интерфейс
         self.html(200, link, slug)
-        logger.info(f"Created short link: {link} for URL: {path}")
+        logger.info(f"Created short link: http://{link} for URL: {path}")
 
     # Обработка GET запроса
     def do_GET(self):
@@ -103,7 +103,7 @@ if __name__ == '__main__':
             lifetime = conf['lifetime']
             debug_mode = conf['debug_mode']
     except TypeError:
-        # Обработка исключения на случай если не указан параметр "-с" до файла конфигурации
+        # Обработка исключения на случай если не указан путь до файла конфигурации (параметр "-с")
         print("Please specify the path to the config JSON-file.\nExample 'server.py -c config.json'")
         exit()
 
@@ -120,8 +120,8 @@ if __name__ == '__main__':
     static = os.getcwd() + r'\static\\'
     for filename in os.listdir(static):
         with open(static + filename) as file:
-            code = file.read()
-            html[filename.rstrip('.html')] = code
+            text = file.read()
+            html[filename.rstrip('.html')] = text
 
     try:
         # Создаем объект для работы с БД через менеджер контекста

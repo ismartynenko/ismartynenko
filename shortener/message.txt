@@ -1,3 +1,0 @@
-404:<html><header><title>Error 404</title></header><body><center><h1>404 - NOT FOUND</center></h1></body></html>
-301:<html><header><title>Redirecting...</title><meta http-equiv='refresh' content='0;URL=_INFO'/></header><body></body></html>
-200:<html><header><title>Shortener - Short URL Service</title></header><body><center><form method="post"><input type ="text" name="link"/><input type="submit"/></form>_INFO</center></body></html>
