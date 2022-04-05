@@ -3,6 +3,7 @@ import argparse
 import logging
 import os
 import sys
+import threading
 from functools import partial
 from urllib import parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -17,20 +18,14 @@ class MyHandler(BaseHTTPRequestHandler):
 
     # Отправка заголовков и определение User-Agent
     def do(self, code=200):
+        # Отправляем заголовки
         self.send_response(code)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
         # Определяем User-agent
         self.ua = self.headers['User-Agent'].split('/')[0]
-        # Проверяем и удаляем ссылки с истекшим временем жизни при каждом POST/GET запросе
-        rem = self.db.clean(lifetime)
-        # Вывод в лог количества удаленных записей
-        if rem == 0:
-            logger.debug(f'Removed {rem} old record(s)')
-        else:
-            logger.info(f'Removed {rem} old record(s)')
 
-    # Вывод информации в Web-интерфейс или CMD-интерфейс
+    # Вывод информации в Web или CMD интерфейс
     def html(self, code: int, link='', slug=''):
         if code == 200:
             info = '<a href="./' + slug + '">' + link + '</a>'
@@ -58,12 +53,13 @@ class MyHandler(BaseHTTPRequestHandler):
         # Получаем короткую ссылку
         slug = self.db.post(path)
         link = str(host) + ':' + str(port) + '/' + slug
-        # Выводим информацию в Web-интерфейс или CMD-интерфейс
+        # Выводим информацию в Web или CMD интерфейс
         self.html(200, link, slug)
-        logger.info(f"Created short link: http://{link} for URL: {path}")
+        logger.info(f"Short link created: http://{link} for URL: {path}")
 
     # Обработка GET запроса
     def do_GET(self):
+        # При запросе главной страницы отображаем её
         if self.path == '/' or self.path == '/favicon.ico':
             self.do(200)
             self.html(200)
@@ -74,12 +70,12 @@ class MyHandler(BaseHTTPRequestHandler):
             # Проверка на ее наличие в БД
             if uri:
                 # Редирект на длинную ссылку
-                logger.info(f"Returned URI: {uri[0]}")
+                logger.info(f"Return URI: {uri[0]}")
                 self.do(301)
                 self.html(301, uri[0])
             else:
                 # Ссылка не найдена в БД
-                logger.info("Returned URI: NOT FOUND")
+                logger.info("Return URI: NOT FOUND")
                 self.do(404)
                 self.html(404)
 
@@ -129,13 +125,19 @@ if __name__ == '__main__':
             logger.info(f'Connecting to Database: {dbname}')
             # Передаем название базы данных в конструктор класса
             my_handler = partial(MyHandler, database)
+            # Запускаем в отдельном потоке проверку и удаление ссылок с истекшим временем жизни
+            th = threading.Thread(target=database.clean, args=(lifetime,))
+            logger.warning(f'DB cleaner start: {th}')
+            th.start()
             # Запуск сервера
             with HTTPServer((host, port), my_handler) as server:
-                logger.warning(f'Started HTTP server on: {host}:{port}')
+                logger.warning(f'HTTP server start on: {host}:{port}')
                 server.serve_forever()
     # Обработка исключения на остановку сервера
     except KeyboardInterrupt:
-        logger.warning(f'Stopping HTTP server on: {host}:{port}')
+        logger.warning('DB cleaner stop')
+        th.join()
+        logger.warning('HTTP server stop')
         server.server_close()
     # Обработка неожиданных исключений
     except Exception as exc:
