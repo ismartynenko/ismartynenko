@@ -15,6 +15,11 @@
 (Пример - 404.html).
 
 Примеры запуска:
-GET: curl 127.0.0.1:8080/index.html (Error 404)
-POST: curl -X POST -d "https://www.yandex.ru" 127.0.0.1:8080/index.html (127.0.0.1:8080/e7538ea6)
-GET: curl 127.0.0.1:8080/e7538ea6 (https://www.yandex.ru)
+GET: curl 127.0.0.1:8080/index.html
+Error 404
+POST: curl -X POST -d "https://www.yandex.ru" 127.0.0.1:8080/index.html
+http://127.0.0.1:8080/e7538ea6
+POST: curl -X POST -d "https://www.yandex.ru" http://127.0.0.1:8080/index.html
+http://127.0.0.1:8080/e7538ea6
+GET: curl http://127.0.0.1:8080/e7538ea6
+https://www.yandex.ru
