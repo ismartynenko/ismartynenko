@@ -13,3 +13,8 @@
 
 Шаблоны html-страниц храняться в папке ./static. Название файлов соответсвует кодам ответа сервера.
 (Пример - 404.html).
+
+Примеры запуска:
+GET: curl 127.0.0.1:8080/index.html (Error 404)
+POST: curl -X POST -d "https://www.yandex.ru" 127.0.0.1:8080/index.html (127.0.0.1:8080/e7538ea6)
+GET: curl 127.0.0.1:8080/e7538ea6 (https://www.yandex.ru)
