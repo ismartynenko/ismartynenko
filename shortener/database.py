@@ -1,6 +1,6 @@
 import hashlib
 import sqlite3
-from time import time, sleep
+from time import time
 
 
 class DBClient:
@@ -11,14 +11,14 @@ class DBClient:
     def __enter__(self):
         # Создаем базу данных
         if self._conn is None:
-            self._conn = sqlite3.connect(self._db_name, check_same_thread=False)
+            self._conn = sqlite3.connect(self._db_name)
         cur = self._conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS Urls"
                     "   (ID     INTEGER     PRIMARY KEY     AUTOINCREMENT,"
                     "   Uri     TEXT    NOT NULL,"
-                    "   Slug    TEXT    NOT NULL,"
+                    "   Slug    TEXT    NOT NULL    UNIQUE,"
                     "   Ctime   TIMESTAMP)")
-        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS 'slug_id' ON 'Urls'('Slug');")
+        cur.execute("CREATE INDEX IF NOT EXISTS 'ctime_idx' ON 'Urls'('CTime');")
         self._conn.commit()
         return self
 
@@ -60,10 +60,8 @@ class DBClient:
 
     # Проверка и чистка записей с истекшим временем хранения
     def clean(self, lifetime: int):
-        while self._conn is not None:
-            cur = self._conn.cursor()
-            cur.execute("DELETE FROM Urls WHERE Ctime < :time",
-                        {'time': time() - lifetime})
-            self._conn.commit()
-            print(f'Deleted {cur.rowcount} old record(s)')
-            sleep(10)
+        cur = self._conn.cursor()
+        cur.execute("DELETE FROM Urls WHERE Ctime < :time",
+                    {'time': time() - lifetime})
+        self._conn.commit()
+        return cur.rowcount
