@@ -94,7 +94,6 @@ def parse_arg():
     except TypeError:
         # Обработка исключения на случай если не указан путь до файла конфигурации (параметр "-с")
         print("Please specify the path to the config JSON-file.\nExample 'server.py -c config.json'")
-        exit()
     return conf
 
 
