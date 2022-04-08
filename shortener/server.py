@@ -31,7 +31,7 @@ class MyHandler(BaseHTTPRequestHandler):
         if code == 200:
             info = '<a href="./' + slug + '">' + link + '</a>'
             txt = html['200'].replace('_INFO', info)
-            self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(link.encode())
+            self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(("http://"+link).encode())
         elif code == 301:
             txt = html['301'].replace('_INFO', link)
             self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(link.encode())
@@ -94,7 +94,6 @@ def parse_arg():
     except TypeError:
         # Обработка исключения на случай если не указан путь до файла конфигурации (параметр "-с")
         print("Please specify the path to the config JSON-file.\nExample 'server.py -c config.json'")
-        exit()
     return conf
 
 
