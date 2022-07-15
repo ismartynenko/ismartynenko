@@ -15,6 +15,7 @@ class MyHandler(BaseHTTPRequestHandler):
     def __init__(self, db, *args, **kwargs):
         self.db = db
         self.ua = None
+        self.slug = None
         super().__init__(*args, **kwargs)
 
     # Метод отправки заголовков и определение User-Agent
@@ -24,14 +25,18 @@ class MyHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
         # Определяем User-agent
-        self.ua = self.headers['User-Agent'].split('/')[0]
+        ua = self.headers['User-Agent']
+        if ua is None:
+            self.ua = 'empty_ua'
+        else:
+            self.ua = ua.split('/')[0]
 
     # Вывод информации в Web или CMD интерфейс
     def html(self, code: int, link='', slug=''):
         if code == 200:
             info = '<a href="./' + slug + '">' + link + '</a>'
             txt = html['200'].replace('_INFO', info)
-            self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(("http://"+link).encode())
+            self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(("http://" + link).encode())
         elif code == 301:
             txt = html['301'].replace('_INFO', link)
             self.wfile.write(txt.encode()) if self.ua != 'curl' else self.wfile.write(link.encode())
@@ -45,7 +50,7 @@ class MyHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         # В зависимости от User-Agent получаем полную ссылку для сокращения
-        if self.ua == 'curl':
+        if self.ua == 'curl' or self.ua == 'empty_ua':
             path = post_data.decode()
         else:
             r_path = parse.parse_qs(post_data.decode())
@@ -53,16 +58,16 @@ class MyHandler(BaseHTTPRequestHandler):
         logger.debug(f"POST request:\n\tUser-Agent: {self.ua}\n\tLink for Shortener: {path}")
         # Получаем короткую ссылку
         with DBClient(self.db) as post:
-            slug = post.post(path)
-        link = str(cfg['host']) + ':' + str(cfg['port']) + '/' + slug
+            self.slug = post.post(path)
+        link = str(cfg['host']) + ':' + str(cfg['port']) + '/' + self.slug
         # Выводим информацию в Web или CMD интерфейс
-        self.html(200, link, slug)
+        self.html(200, link, self.slug)
         logger.info(f"Short link created: http://{link} for URL: {path}")
 
     # Метод обработки GET-запроса
     def do_GET(self):
         # При запросе главной страницы - отображаем её
-        if self.path == '/' or self.path == '/favicon.ico':
+        if self.path == '/' or self.path == '/favicon.ico' or self.path == '/index.html':
             self.do(200)
             self.html(200)
         else:
